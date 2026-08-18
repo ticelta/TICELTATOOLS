@@ -1,1 +1,410 @@
-<h1>teste</h1>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Leitor de Código de Barras — Rota — Celta Fitas</title>
+<style>
+  :root {
+    --azul: #0B3D5C;
+    --azul-escuro: #08283D;
+    --laranja: #E8712B;
+    --cinza-fundo: #F3F5F7;
+    --cinza-borda: #DCE2E8;
+    --verde: #1C8A5A;
+    --vermelho: #C0392B;
+    --texto: #1C2530;
+    --texto-suave: #5B6B7A;
+    --branco: #FFFFFF;
+    --raio: 10px;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--cinza-fundo);
+    color: var(--texto);
+    font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+  }
+  .container-leitor {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 16px;
+  }
+  .cabecalho-leitor {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 8px 0 16px;
+  }
+  .cabecalho-leitor h1 {
+    font-size: 18px;
+    margin: 0;
+    color: var(--azul-escuro);
+  }
+  .cartao {
+    background: var(--branco);
+    border: 1px solid var(--cinza-borda);
+    border-radius: var(--raio);
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(20,30,40,0.05);
+  }
+  label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--texto-suave);
+    display: block;
+    margin-top: 12px;
+  }
+  input[type="text"], input[type="password"], input[type="tel"] {
+    width: 100%;
+    padding: 11px 12px;
+    border: 1px solid var(--cinza-borda);
+    border-radius: 8px;
+    font-size: 15px;
+    margin-top: 4px;
+  }
+  .texto-suave { color: var(--texto-suave); }
+  .modal-subtitulo { margin: 2px 0 14px; font-size: 13px; color: var(--texto-suave); }
+  .opcoes-via { display: flex; gap: 8px; margin-top: 6px; }
+  .botao-via {
+    flex: 1 1 auto;
+    padding: 10px 14px;
+    border: 2px solid var(--cinza-borda);
+    border-radius: 8px;
+    background: var(--branco);
+    color: var(--texto);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .botao-via.selecionado {
+    border-color: var(--azul);
+    background: #EAF1F7;
+    color: var(--azul-escuro);
+  }
+  .botao {
+    background: var(--laranja);
+    color: var(--branco);
+    border: none;
+    padding: 12px 20px;
+    border-radius: var(--raio);
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .botao:disabled { opacity: 0.5; cursor: not-allowed; }
+  .botao.secundario { background: var(--azul); }
+  .area-video {
+    position: relative;
+    width: 100%;
+    background: #000;
+    border-radius: var(--raio);
+    overflow: hidden;
+    aspect-ratio: 3 / 4;
+  }
+  .area-video video { width: 100%; height: 100%; object-fit: cover; }
+  .guia-leitura {
+    position: absolute;
+    top: 30%;
+    left: 8%;
+    width: 84%;
+    height: 22%;
+    border: 3px solid rgba(255, 255, 255, 0.85);
+    border-radius: 10px;
+    box-shadow: 0 0 0 999px rgba(0, 0, 0, 0.35);
+    pointer-events: none;
+  }
+  .status-leitura {
+    text-align: center;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--texto-suave);
+    margin: 12px 0;
+    min-height: 20px;
+  }
+  .status-leitura.sucesso { color: var(--verde); }
+  .status-leitura.erro { color: var(--vermelho); }
+  .resumo-sessao { display: flex; justify-content: space-between; gap: 10px; margin: 12px 0; }
+  .resumo-item {
+    flex: 1;
+    background: var(--branco);
+    border: 1px solid var(--cinza-borda);
+    border-radius: var(--raio);
+    padding: 10px;
+    text-align: center;
+  }
+  .resumo-item .numero { font-size: 22px; font-weight: 800; }
+  .resumo-item .rotulo { font-size: 11px; color: var(--texto-suave); text-transform: uppercase; }
+  .lista-leituras {
+    margin-top: 12px;
+    max-height: 260px;
+    overflow-y: auto;
+    border: 1px solid var(--cinza-borda);
+    border-radius: var(--raio);
+    background: var(--branco);
+  }
+  .item-leitura {
+    display: flex; align-items: flex-start; gap: 8px;
+    padding: 10px 12px; font-size: 13px;
+    border-bottom: 1px solid var(--cinza-fundo);
+  }
+  .item-leitura:last-child { border-bottom: none; }
+  .item-leitura.sucesso .icone { color: var(--verde); }
+  .item-leitura.erro .icone { color: var(--vermelho); }
+  .rodape-leitor { display: flex; gap: 10px; margin-top: 14px; }
+  .rodape-leitor .botao { flex: 1; }
+  .aviso-camera {
+    background: #FBECEA;
+    color: var(--vermelho);
+    border: 1px solid #F3CBC4;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 13px;
+    margin-top: 10px;
+  }
+</style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://unpkg.com/@zxing/library@0.20.0/umd/index.min.js"></script>
+  <script type="text/babel">
+    const { useState, useRef, useEffect } = React;
+
+    // Cole aqui a URL /exec do projeto Apps Script "Leitor Externo"
+    // (a implantação separada, com acesso "Qualquer pessoa").
+    const URL_ENDPOINT = 'COLE_AQUI_A_URL_DO_APPS_SCRIPT/exec';
+
+    function App() {
+      const [etapa, setEtapa] = useState('config');
+      const [nomeMotorista, setNomeMotorista] = useState('');
+      const [via, setVia] = useState('');
+      const [pin, setPin] = useState('');
+      const [statusLeitura, setStatusLeitura] = useState({ tipo: '', texto: 'Aponte a câmera para o código de barras da NF-e.' });
+      const [historico, setHistorico] = useState([]);
+      const [erroCamera, setErroCamera] = useState('');
+      const [processando, setProcessando] = useState(false);
+
+      const videoRef = useRef(null);
+      const leitorRef = useRef(null);
+      const ultimaLeituraRef = useRef({ texto: '', hora: 0 });
+      const processandoRef = useRef(false);
+
+      const totalSucesso = historico.filter((h) => h.tipo === 'sucesso').length;
+      const totalErro = historico.filter((h) => h.tipo === 'erro').length;
+
+      function tocarBip(sucesso) {
+        try {
+          const ctx = new (window.AudioContext || window.webkitAudioContext)();
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.frequency.value = sucesso ? 880 : 220;
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          gain.gain.setValueAtTime(0.2, ctx.currentTime);
+          osc.start();
+          osc.stop(ctx.currentTime + (sucesso ? 0.12 : 0.25));
+        } catch (e) { /* navegador sem suporte a áudio, ignora */ }
+        if (navigator.vibrate) {
+          navigator.vibrate(sucesso ? 80 : [80, 60, 80]);
+        }
+      }
+
+      function iniciarLeitura() {
+        if (!nomeMotorista.trim() || !via || !pin.trim()) return;
+        setEtapa('lendo');
+        setErroCamera('');
+        setHistorico([]);
+        setStatusLeitura({ tipo: '', texto: 'Aponte a câmera para o código de barras da NF-e.' });
+      }
+
+      function pararLeitura() {
+        if (leitorRef.current) {
+          try { leitorRef.current.reset(); } catch (e) {}
+          leitorRef.current = null;
+        }
+        setEtapa('config');
+      }
+
+      // Chama o endpoint via fetch usando text/plain para evitar o
+      // preflight CORS (que o Apps Script não responde corretamente).
+      function enviarLeitura(chaveAcesso) {
+        return fetch(URL_ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({
+            pin: pin.trim(),
+            chaveAcesso: chaveAcesso,
+            nomeMotorista: nomeMotorista.trim(),
+            via: via
+          })
+        }).then((resp) => resp.json());
+      }
+
+      useEffect(() => {
+        if (etapa !== 'lendo') return;
+
+        const codeReader = new ZXing.BrowserMultiFormatReader();
+        leitorRef.current = codeReader;
+
+        codeReader.decodeFromConstraints(
+          { video: { facingMode: 'environment' } },
+          videoRef.current,
+          (resultado, erro) => {
+            if (!resultado) return;
+            const texto = resultado.getText();
+            const agora = Date.now();
+
+            if (texto === ultimaLeituraRef.current.texto && (agora - ultimaLeituraRef.current.hora) < 3000) {
+              return;
+            }
+            if (processandoRef.current) return;
+
+            ultimaLeituraRef.current = { texto: texto, hora: agora };
+            processandoRef.current = true;
+            setProcessando(true);
+            setStatusLeitura({ tipo: '', texto: 'Processando leitura...' });
+
+            enviarLeitura(texto)
+              .then((resp) => {
+                processandoRef.current = false;
+                setProcessando(false);
+                tocarBip(resp.ok);
+                setStatusLeitura({ tipo: resp.ok ? 'sucesso' : 'erro', texto: resp.mensagem });
+                setHistorico((atual) => [{
+                  tipo: resp.ok ? 'sucesso' : 'erro',
+                  texto: resp.mensagem,
+                  hora: new Date().toLocaleTimeString('pt-BR')
+                }, ...atual]);
+              })
+              .catch((erroServidor) => {
+                processandoRef.current = false;
+                setProcessando(false);
+                tocarBip(false);
+                const msg = 'Erro ao processar leitura: ' + erroServidor.message;
+                setStatusLeitura({ tipo: 'erro', texto: msg });
+                setHistorico((atual) => [{ tipo: 'erro', texto: msg, hora: new Date().toLocaleTimeString('pt-BR') }, ...atual]);
+              });
+          }
+        ).catch((err) => {
+          setErroCamera('Não foi possível acessar a câmera: ' + err.message + '. Verifique se você concedeu permissão de câmera para este site.');
+        });
+
+        return () => {
+          try { codeReader.reset(); } catch (e) {}
+        };
+      }, [etapa]);
+
+      if (etapa === 'config') {
+        return (
+          <div className="container-leitor">
+            <div className="cabecalho-leitor">
+              <h1>📷 Leitor de Código de Barras — Rota</h1>
+            </div>
+            <div className="cartao">
+              <label>Nome do motorista</label>
+              <input
+                type="text"
+                placeholder="Nome do motorista"
+                value={nomeMotorista}
+                onChange={(e) => setNomeMotorista(e.target.value)}
+              />
+
+              <label>PIN de acesso</label>
+              <input
+                type="tel"
+                inputMode="numeric"
+                placeholder="PIN fornecido pelo TI"
+                value={pin}
+                onChange={(e) => setPin(e.target.value)}
+              />
+
+              <p className="modal-subtitulo" style={{ marginTop: 14 }}>Via de transporte:</p>
+              <div className="opcoes-via">
+                <button
+                  type="button"
+                  className={'botao-via' + (via === '🚢' ? ' selecionado' : '')}
+                  onClick={() => setVia('🚢')}
+                >
+                  🚢 Barco
+                </button>
+                <button
+                  type="button"
+                  className={'botao-via' + (via === '🚚' ? ' selecionado' : '')}
+                  onClick={() => setVia('🚚')}
+                >
+                  🚚 Veiculo automotivo
+                </button>
+              </div>
+
+              <button
+                className="botao"
+                style={{ width: '100%', marginTop: 18 }}
+                onClick={iniciarLeitura}
+                disabled={!nomeMotorista.trim() || !via || !pin.trim()}
+              >
+                Iniciar Leitura
+              </button>
+              <p className="texto-suave" style={{ fontSize: 12, marginTop: 10 }}>
+                Informe o motorista, o PIN e a via uma única vez — depois é só escanear as NF-e em
+                sequência. Todas serão marcadas como EM ROTA automaticamente.
+              </p>
+            </div>
+          </div>
+        );
+      }
+
+      return (
+        <div className="container-leitor">
+          <div className="cabecalho-leitor">
+            <h1>📷 Escaneando — {nomeMotorista} ({via})</h1>
+          </div>
+
+          <div className="area-video">
+            <video ref={videoRef} muted playsInline></video>
+            <div className="guia-leitura"></div>
+          </div>
+
+          {erroCamera && <div className="aviso-camera">⚠️ {erroCamera}</div>}
+
+          <p className={'status-leitura' + (statusLeitura.tipo ? ' ' + statusLeitura.tipo : '')}>
+            {processando ? 'Processando leitura...' : statusLeitura.texto}
+          </p>
+
+          <div className="resumo-sessao">
+            <div className="resumo-item">
+              <div className="numero" style={{ color: 'var(--verde)' }}>{totalSucesso}</div>
+              <div className="rotulo">Confirmadas</div>
+            </div>
+            <div className="resumo-item">
+              <div className="numero" style={{ color: 'var(--vermelho)' }}>{totalErro}</div>
+              <div className="rotulo">Com erro</div>
+            </div>
+          </div>
+
+          {historico.length > 0 && (
+            <div className="lista-leituras">
+              {historico.map((h, i) => (
+                <div key={i} className={'item-leitura ' + h.tipo}>
+                  <span className="icone">{h.tipo === 'sucesso' ? '✅' : '⚠️'}</span>
+                  <span><strong>{h.hora}</strong> — {h.texto}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="rodape-leitor">
+            <button className="botao secundario" onClick={pararLeitura}>Encerrar Leitura</button>
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
